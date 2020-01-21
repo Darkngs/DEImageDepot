@@ -9,7 +9,7 @@ ImageDepot.shared.image(withPath: imagePath) { [weak self] (image) in
 }
 ```
 
-##### Clear depot
+## Clear depot
 ```
 ImageDepot.shared.clear()
 ```
