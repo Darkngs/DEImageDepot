@@ -6,11 +6,16 @@ import UIKit
 
 typealias ImageClosure = (_ image: UIImage?) -> Void
 
-class DEImageDepot {
+
+public class DEImageDepot {
    
-   static let shared = DEImageDepot()
+   public static let shared = DEImageDepot()
    
    private let imagePrefix = "de-image-depot-"
+   
+   private var queue: [String: [ImageClosure]] = [:]
+   
+   // MARK: -
    
    private init() {
       
@@ -32,23 +37,41 @@ class DEImageDepot {
          return
       }
       
+      if var request = queue[path] {
+         request.append(completion)
+         queue[path] = request
+         return
+      }
+      
+      queue[path] = [completion]
+      
       DispatchQueue.global(qos: .userInteractive).async {
          do {
             let data = try Data(contentsOf: url)
-            let image = UIImage(data: data)
-            
-            DispatchQueue.main.async {
-               completion(image)
-            }
-            
-            self.saveImageData(data, withPath: path)
+            self.handleImageData(data, withPath: path)
          } catch {
             print(error)
-            
-            DispatchQueue.main.async {
-               completion(nil)
-            }
+            self.handleImageData(Data(), withPath: path)
          }
+      }
+   }
+   
+   private func handleImageData(_ data: Data, withPath path: String) {
+      let image = UIImage(data: data)
+      
+      guard let request = queue[path] else {
+         return
+      }
+      
+      DispatchQueue.main.async {
+         for completion in request {
+            completion(image)
+         }
+         self.queue.removeValue(forKey: path)
+      }
+      
+      if !data.isEmpty {
+         saveImageData(data, withPath: path)
       }
    }
    
@@ -76,7 +99,9 @@ class DEImageDepot {
    
    // MARK: -
    
-   func clear() {
+   public func clear() {
+      queue.removeAll()
+      
       let fileManager = FileManager.default
       
       guard let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
@@ -102,7 +127,7 @@ class DEImageDepot {
       }
    }
    
-   func image(withPath path: String, _ completion: @escaping ImageClosure) {
+   public func image(withPath path: String, _ completion: @escaping ImageClosure) {
       let name = imageName(withPath: path)
       
       guard let imagePath = UserDefaults.standard.string(forKey: name) else {
