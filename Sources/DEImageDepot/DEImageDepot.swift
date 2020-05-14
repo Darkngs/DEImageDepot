@@ -4,8 +4,7 @@
 
 import UIKit
 
-typealias ImageClosure = (_ image: UIImage?) -> Void
-
+public typealias ImageClosure = (_ image: UIImage?) -> Void
 
 public class DEImageDepot {
    
